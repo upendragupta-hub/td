@@ -36,18 +36,29 @@ const allowedOrigins = Array.from(
   ].filter(Boolean)),
 );
 
+console.log('Allowed CORS Origins:', allowedOrigins);
+
 // Middleware
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow requests without origin (like mobile apps or server-to-server)
+      if (!origin) {
         callback(null, true);
         return;
       }
 
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      console.warn(`CORS blocked origin: ${origin}`);
       callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   }),
 );
 app.use(cookieParser());
@@ -60,10 +71,31 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/wecare_hosp
     .catch(err => console.error('MongoDB connection error:', err));
 
 // Routes
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'WeCare backend is running',
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'WeCare backend is running',
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/api/test', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'WeCare backend is working perfectly!',
+    environment: process.env.NODE_ENV,
+    backendUrl: process.env.BACKEND_PUBLIC_URL,
+    frontendUrl: process.env.FRONTEND_URL,
   });
 });
 

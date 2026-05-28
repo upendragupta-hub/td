@@ -12,15 +12,22 @@ export function initSocketServer(server) {
   if (ioInstance) return ioInstance;
 
   const allowedOrigins = Array.from(
-    new Set(localFrontendOrigins),
+    new Set([
+      process.env.FRONTEND_URL,
+      ...localFrontendOrigins,
+    ].filter(Boolean)),
   );
+
+  console.log('Socket.IO allowed origins:', allowedOrigins);
 
   ioInstance = new Server(server, {
     cors: {
       origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true,
+      allowEIO3: true,
     },
+    transports: ['websocket', 'polling'],
   });
 
   ioInstance.on('connection', (socket) => {

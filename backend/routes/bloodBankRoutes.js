@@ -26,7 +26,7 @@ router.patch('/emergency-requests/:id/status', updateEmergencyRequestStatus);
 // For simplicity, I'm not adding them here, but you should for a real app.
 router.post('/donate', addBloodDonation);
 router.post('/use', useBlood); // This route might also need protection
-router.post('/emergency-request', protectUser, createEmergencyRequest); // Add this line for public emergency requests
+router.post('/emergency-request', createEmergencyRequest); // Public endpoint - no authentication required for emergency requests
 router.patch('/critical-level/:bloodGroup', updateCriticalLevel);
 
 export default router;

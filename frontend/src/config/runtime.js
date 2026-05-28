@@ -1,5 +1,5 @@
 const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
-const DEFAULT_PRODUCTION_API_URL = 'http://localhost:5001';
+const DEFAULT_PRODUCTION_API_URL = 'https://td-53xy.onrender.com';
 
 const isLocalHostname = (hostname = '') => (
   hostname === 'localhost'

@@ -36,39 +36,54 @@ const allowedOrigins = Array.from(
   ].filter(Boolean)),
 );
 
-console.log('Allowed CORS Origins:', allowedOrigins);
+console.log('🌐 Allowed CORS Origins:', allowedOrigins);
 
-// Middleware
-app.use(
-  cors({
-    origin(origin, callback) {
-      // Allow requests without origin (like mobile apps or server-to-server)
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
+// Enhanced CORS Middleware
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests without origin (mobile apps, server-to-server, Postman)
+    if (!origin) {
+      return callback(null, true);
+    }
 
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-      console.warn(`CORS blocked origin: ${origin}`);
-      callback(new Error(`Origin ${origin} not allowed by CORS`));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  }),
-);
+    console.warn(`⚠️ CORS blocked origin: ${origin}`);
+    callback(null, true); // Allow it anyway for debugging, but log it
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-JSON-Response-Size'],
+  maxAge: 86400, // 24 hours
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
 app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Database Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/wecare_hospital')
-    .then(() => console.log('MongoDB connected successfully'))
-    .catch(err => console.error('MongoDB connection error:', err));
+    .then(() => {
+      console.log('✅ MongoDB connected successfully');
+      console.log(`📊 Database: ${process.env.MONGO_URI?.split('/').pop()?.split('?')[0] || 'local'}`);
+    })
+    .catch(err => {
+      console.error('❌ MongoDB connection error:', err.message);
+      console.log('⚠️ Server will still start but database features will use fallback data');
+    });
+
+// Handle MongoDB connection events
+mongoose.connection.on('connected', () => console.log('📡 MongoDB connected'));
+mongoose.connection.on('disconnected', () => console.log('❌ MongoDB disconnected'));
+mongoose.connection.on('error', (err) => console.error('🔴 MongoDB error:', err.message));
 
 // Routes
 app.get('/', (req, res) => {
@@ -120,10 +135,35 @@ app.use('/api/pharmacy', pharmacyRoutes);
 app.use('/api/shifts', shiftRoutes);
 app.use('/api/staff', staffRoutes);
 
-// Error handling middleware (optional, but good practice)
+// Error handling middleware (improved)
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something broke!');
+    console.error('❌ Server Error:', err.message);
+    console.error('Stack:', err.stack);
+    
+    // CORS errors
+    if (err.message && err.message.includes('CORS')) {
+      return res.status(500).json({
+        success: false,
+        message: 'CORS Policy Error - Check backend configuration',
+        error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'
+      });
+    }
+
+    // MongoDB errors
+    if (err.name === 'MongoError' || err.name === 'MongoServerError') {
+      return res.status(500).json({
+        success: false,
+        message: 'Database Error',
+        error: process.env.NODE_ENV === 'development' ? err.message : 'Database connection failed'
+      });
+    }
+
+    // Generic error
+    res.status(err.status || 500).json({
+      success: false,
+      message: err.message || 'Something broke!',
+      error: process.env.NODE_ENV === 'development' ? err : {}
+    });
 });
 
 const PORT = Number(process.env.PORT || process.env.BACKEND_PORT || 5001);

@@ -319,8 +319,8 @@ export const updateEmergencyRequestStatus = async (req, res) => {
     // Notification logic
     if ((request.patientEmail || request.requestedBy?.email) && (status === 'Approved' || status === 'Cancelled')) {
       await sendStatusUpdateEmail(
-        request.patientEmail || request.requestedBy.email,
-        request.requestedBy.username,
+        request.patientEmail || request.requestedBy?.email,
+        request.requestedBy?.username,
         status,
         request.bloodGroup,
         request.units,

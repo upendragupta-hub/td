@@ -248,7 +248,7 @@ const getBillingBreakdown = (request, ambulance, distanceKmOverride = null) => {
 };
 
 const buildTrackingLink = (req, trackingCode) => {
-  const baseUrl = req.headers.origin || process.env.FRONTEND_URL || '';
+  const baseUrl = (req?.headers?.origin || process.env.FRONTEND_URL || '');
   return `${baseUrl}/#ambulance?tracking=${trackingCode}`;
 };
 
